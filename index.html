@@ -128,8 +128,9 @@
         calculateEstimatedPayouts();
     }
 
-    async function fetchPoolData() {
-        const { data: bets, error } = await supabase.from('bets').select('*');
+   async function fetchPoolData() {
+        // Updated to supabaseClient
+        const { data: bets, error } = await supabaseClient.from('bets').select('*');
         if (error) return console.error(error);
 
         let pools = {
@@ -191,12 +192,12 @@
         }
 
         // Send row for Fight 1
-        const { error: err1 } = await supabase.from('bets').insert([
+        const { error: err1 } = await supabaseClient.from('bets').insert([
             { player_name: name, fight_number: 1, fighter_picked: userSelections[1].name, wager_amount: wager }
         ]);
 
         // Send row for Fight 2
-        const { error: err2 } = await supabase.from('bets').insert([
+        const { error: err2 } = await supabaseClient.from('bets').insert([
             { player_name: name, fight_number: 2, fighter_picked: userSelections[2].name, wager_amount: wager }
         ]);
 
