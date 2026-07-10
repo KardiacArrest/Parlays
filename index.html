@@ -205,10 +205,10 @@
         const pctZhu = pools.F2_Total > 0 ? (pools.Zhu / pools.F2_Total) * 100 : 50;
 
         // Update odds labels
-        document.getElementById('odds-TonyLiLi').innerText = `Odds: ${currentOdds.TonyLiLi.toFixed(2)}x`;
-        document.getElementById('odds-KevinBrown').innerText = `Odds: ${currentOdds.KevinBrown.toFixed(2)}x`;
-        document.getElementById('odds-JianHao').innerText = `Odds: ${currentOdds.JianHao.toFixed(2)}x`;
-        document.getElementById('odds-Zhu').innerText = `Odds: ${currentOdds.Zhu.toFixed(2)}x`;
+        document.getElementById('odds-TonyLiLi').innerText = `Payout: ${currentOdds.TonyLiLi.toFixed(2)}x`;
+        document.getElementById('odds-KevinBrown').innerText = `Payout: ${currentOdds.KevinBrown.toFixed(2)}x`;
+        document.getElementById('odds-JianHao').innerText = `Payout: ${currentOdds.JianHao.toFixed(2)}x`;
+        document.getElementById('odds-Zhu').innerText = `Payout: ${currentOdds.Zhu.toFixed(2)}x`;
 
         // Update visual distribution bar & labels
         document.getElementById('pct-TonyLiLi').innerText = `${pctTony.toFixed(0)}% of pool`;
