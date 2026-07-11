@@ -139,186 +139,179 @@
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://gehbyxxgqvbbxjdbdlrw.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_kBZ3vAiZCqgb-0BAj16e1w_UU6GSwjo';
+   const SUPABASE_URL = 'https://gehbyxxgqvbbxjdbdlrw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_kBZ3vAiZCqgb-0BAj16e1w_UU6GSwjo';
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Global tracking object for multipliers, raw pool metrics, and vote counts
+let currentOdds = {
+    TonyLiLi: 2.0, KevinBrown: 2.0, JianHao: 2.0, Zhu: 2.0,
+    F1_Total_Raw: 0, F2_Total_Raw: 0,
+    TonyLiLi_Raw: 0, KevinBrown_Raw: 0, JianHao_Raw: 0, Zhu_Raw: 0
+};
+
+let userSelections = {
+    1: { name: null },
+    2: { name: null }
+};
+
+fetchPoolData();
+
+function selectFighter(fightNum, fighterName, element) {
+    const buttons = element.parentElement.querySelectorAll('.btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
     
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // Global tracking object for multipliers and raw pool metrics
-    let currentOdds = {
-        TonyLiLi: 2.0, KevinBrown: 2.0, JianHao: 2.0, Zhu: 2.0,
-        F1_Total_Raw: 0, F2_Total_Raw: 0,
-        TonyLiLi_Raw: 0, KevinBrown_Raw: 0, JianHao_Raw: 0, Zhu_Raw: 0
-    };
-
-    let userSelections = {
-        1: { name: null },
-        2: { name: null }
-    };
-
-    fetchPoolData();
-
-    function selectFighter(fightNum, fighterName, element) {
-        const buttons = element.parentElement.querySelectorAll('.btn');
-        buttons.forEach(btn => btn.classList.remove('active'));
-        element.classList.add('active');
-        
-        userSelections[fightNum].name = fighterName;
-        
-        const submitBtn = document.getElementById('submitBetBtn');
-        if (userSelections[1].name && userSelections[2].name) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Submit Bet Ticket";
-        }
-        
-        calculateEstimatedPayouts();
+    userSelections[fightNum].name = fighterName;
+    
+    const submitBtn = document.getElementById('submitBetBtn');
+    if (userSelections[1].name && userSelections[2].name) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit Bet Ticket";
     }
+    
+    calculateEstimatedPayouts();
+}
 
-    async function fetchPoolData() {
-        const { data: bets, error } = await supabaseClient.from('bets').select('*');
-        if (error) return console.error(error);
+async function fetchPoolData() {
+    const { data: bets, error } = await supabaseClient.from('bets').select('*');
+    if (error) return console.error(error);
 
-        let pools = {
-            F1_Total: 0, F2_Total: 0,
-            TonyLiLi: 0, KevinBrown: 0,
-            JianHao: 0, Zhu: 0
-        };
+    // Initializing structure to hold cash pools and vote counts independently
+    let pools = {
+        F1_Total: 0, F2_Total: 0,
+        TonyLiLi: 0, KevinBrown: 0,
+        JianHao: 0, Zhu: 0
+    };
 
-        bets.forEach(bet => {
-            if (bet.fight_number === 1) {
-                pools.F1_Total += bet.wager_amount;
-                if (pools[bet.fighter_picked] !== undefined) pools[bet.fighter_picked] += bet.wager_amount;
-            } else if (bet.fight_number === 2) {
-                pools.F2_Total += bet.wager_amount;
-                if (pools[bet.fighter_picked] !== undefined) pools[bet.fighter_picked] += bet.wager_amount;
+    let votes = {
+        TonyLiLi: 0, KevinBrown: 0,
+        JianHao: 0, Zhu: 0
+    };
+
+    bets.forEach(bet => {
+        if (bet.fight_number === 1) {
+            pools.F1_Total += bet.wager_amount;
+            if (pools[bet.fighter_picked] !== undefined) {
+                pools[bet.fighter_picked] += bet.wager_amount;
+                votes[bet.fighter_picked] += 1; // Increment vote regardless of wager size
             }
-        });
-
-        // Save raw metrics globally so payout estimation handles context cleanly
-        currentOdds.F1_Total_Raw = pools.F1_Total;
-        currentOdds.F2_Total_Raw = pools.F2_Total;
-        currentOdds.TonyLiLi_Raw = pools.TonyLiLi;
-        currentOdds.KevinBrown_Raw = pools.KevinBrown;
-        currentOdds.JianHao_Raw = pools.JianHao;
-        currentOdds.Zhu_Raw = pools.Zhu;
-
-        // Calculate parimutuel baseline multipliers
-        if (pools.F1_Total === 0) {
-            currentOdds.TonyLiLi = 2.00;
-            currentOdds.KevinBrown = 2.00;
-        } else {
-            currentOdds.TonyLiLi = pools.TonyLiLi > 0 ? pools.F1_Total / pools.TonyLiLi : 1.00;
-            currentOdds.KevinBrown = pools.KevinBrown > 0 ? pools.F1_Total / pools.KevinBrown : 1.00;
+        } else if (bet.fight_number === 2) {
+            pools.F2_Total += bet.wager_amount;
+            if (pools[bet.fighter_picked] !== undefined) {
+                pools[bet.fighter_picked] += bet.wager_amount;
+                votes[bet.fighter_picked] += 1; // Increment vote regardless of wager size
+            }
         }
+    });
 
-        if (pools.F2_Total === 0) {
-            currentOdds.JianHao = 2.00;
-            currentOdds.Zhu = 2.00;
-        } else {
-            currentOdds.JianHao = pools.JianHao > 0 ? pools.F2_Total / pools.JianHao : 1.00;
-            currentOdds.Zhu = pools.Zhu > 0 ? pools.F2_Total / pools.Zhu : 1.00;
-        }
+    // Save raw metrics globally so payout estimation handles context cleanly
+    currentOdds.F1_Total_Raw = pools.F1_Total;
+    currentOdds.F2_Total_Raw = pools.F2_Total;
+    currentOdds.TonyLiLi_Raw = pools.TonyLiLi;
+    currentOdds.KevinBrown_Raw = pools.KevinBrown;
+    currentOdds.JianHao_Raw = pools.JianHao;
+    currentOdds.Zhu_Raw = pools.Zhu;
 
-        // Percentage split math
-        const pctTony = pools.F1_Total > 0 ? (pools.TonyLiLi / pools.F1_Total) * 100 : 50;
-        const pctKevin = pools.F1_Total > 0 ? (pools.KevinBrown / pools.F1_Total) * 100 : 50;
-        const pctJian = pools.F2_Total > 0 ? (pools.JianHao / pools.F2_Total) * 100 : 50;
-        const pctZhu = pools.F2_Total > 0 ? (pools.Zhu / pools.F2_Total) * 100 : 50;
+    // Calculate parimutuel baseline multipliers (fallback to 2.0 if pool is completely dry)
+    currentOdds.TonyLiLi = pools.TonyLiLi > 0 ? pools.F1_Total / pools.TonyLiLi : (pools.F1_Total === 0 ? 2.00 : 1.00);
+    currentOdds.KevinBrown = pools.KevinBrown > 0 ? pools.F1_Total / pools.KevinBrown : (pools.F1_Total === 0 ? 2.00 : 1.00);
+    currentOdds.JianHao = pools.JianHao > 0 ? pools.F2_Total / pools.JianHao : (pools.F2_Total === 0 ? 2.00 : 1.00);
+    currentOdds.Zhu = pools.Zhu > 0 ? pools.F2_Total / pools.Zhu : (pools.F2_Total === 0 ? 2.00 : 1.00);
 
-        // UI text configuration
-        document.getElementById('odds-TonyLiLi').innerText = `Return Multiplier: ${currentOdds.TonyLiLi.toFixed(2)}x`;
-        document.getElementById('odds-KevinBrown').innerText = `Return Multiplier: ${currentOdds.KevinBrown.toFixed(2)}x`;
-        document.getElementById('odds-JianHao').innerText = `Return Multiplier: ${currentOdds.JianHao.toFixed(2)}x`;
-        document.getElementById('odds-Zhu').innerText = `Return Multiplier: ${currentOdds.Zhu.toFixed(2)}x`;
+    // Percentage split math
+    const pctTony = pools.F1_Total > 0 ? (pools.TonyLiLi / pools.F1_Total) * 100 : 50;
+    const pctKevin = pools.F1_Total > 0 ? (pools.KevinBrown / pools.F1_Total) * 100 : 50;
+    const pctJian = pools.F2_Total > 0 ? (pools.JianHao / pools.F2_Total) * 100 : 50;
+    const pctZhu = pools.F2_Total > 0 ? (pools.Zhu / pools.F2_Total) * 100 : 50;
 
-        // Volume bar visualization mapping
-        document.getElementById('pct-TonyLiLi').innerText = `${pctTony.toFixed(0)}% of pool`;
-        document.getElementById('pct-KevinBrown').innerText = `${pctKevin.toFixed(0)}% of pool`;
-        document.getElementById('bar-TonyLiLi').style.width = `${pctTony}%`;
-        document.getElementById('bar-KevinBrown').style.width = `${pctKevin}%`;
+    // UI text configuration for multipliers
+    document.getElementById('odds-TonyLiLi').innerText = `Return Multiplier: ${currentOdds.TonyLiLi.toFixed(2)}x`;
+    document.getElementById('odds-KevinBrown').innerText = `Return Multiplier: ${currentOdds.KevinBrown.toFixed(2)}x`;
+    document.getElementById('odds-JianHao').innerText = `Return Multiplier: ${currentOdds.JianHao.toFixed(2)}x`;
+    document.getElementById('odds-Zhu').innerText = `Return Multiplier: ${currentOdds.Zhu.toFixed(2)}x`;
 
-        document.getElementById('pct-JianHao').innerText = `${pctJian.toFixed(0)}% of pool`;
-        document.getElementById('pct-Zhu').innerText = `${pctZhu.toFixed(0)}% of pool`;
-        document.getElementById('bar-JianHao').style.width = `${pctJian}%`;
-        document.getElementById('bar-Zhu').style.width = `${pctZhu}%`;
+    // Volume bar visualization mapping + dynamic vote tags
+    document.getElementById('pct-TonyLiLi').innerText = `${pctTony.toFixed(0)}% of pool (${votes.TonyLiLi} votes)`;
+    document.getElementById('pct-KevinBrown').innerText = `${pctKevin.toFixed(0)}% of pool (${votes.KevinBrown} votes)`;
+    document.getElementById('bar-TonyLiLi').style.width = `${pctTony}%`;
+    document.getElementById('bar-KevinBrown').style.width = `${pctKevin}%`;
 
-        calculateEstimatedPayouts();
+    document.getElementById('pct-JianHao').innerText = `${pctJian.toFixed(0)}% of pool (${votes.JianHao} votes)`;
+    document.getElementById('pct-Zhu').innerText = `${pctZhu.toFixed(0)}% of pool (${votes.Zhu} votes)`;
+    document.getElementById('bar-JianHao').style.width = `${pctJian}%`;
+    document.getElementById('bar-Zhu').style.width = `${pctZhu}%`;
+
+    calculateEstimatedPayouts();
+}
+
+function calculateEstimatedPayouts() {
+    const wager1 = parseFloat(document.getElementById('wager1').value) || 0;
+    const wager2 = parseFloat(document.getElementById('wager2').value) || 0;
+
+    let f1Total = currentOdds.F1_Total_Raw || 0;
+    let f2Total = currentOdds.F2_Total_Raw || 0;
+    let tonyTotal = currentOdds.TonyLiLi_Raw || 0;
+    let kevinTotal = currentOdds.KevinBrown_Raw || 0;
+    let jianTotal = currentOdds.JianHao_Raw || 0;
+    let zhuTotal = currentOdds.Zhu_Raw || 0;
+
+    // Fight 1 Math
+    if (userSelections[1].name && wager1 > 0) {
+        const simulatedTotalPool = f1Total + wager1;
+        let simulatedFighterPool = userSelections[1].name === 'TonyLiLi' ? tonyTotal + wager1 : kevinTotal + wager1;
+        let calculatedPayout = wager1 * (simulatedTotalPool / simulatedFighterPool);
+        let cappedPayout = Math.min(calculatedPayout, simulatedTotalPool);
+        document.getElementById('payout-f1').innerText = `$${cappedPayout.toFixed(2)}`;
+    } else {
+        document.getElementById('payout-f1').innerText = `$0.00`;
+    }
+    
+    // Fight 2 Math
+    if (userSelections[2].name && wager2 > 0) {
+        const simulatedTotalPool = f2Total + wager2;
+        let simulatedFighterPool = userSelections[2].name === 'JianHao' ? jianTotal + wager2 : zhuTotal + wager2;
+        let calculatedPayout = wager2 * (simulatedTotalPool / simulatedFighterPool);
+        let cappedPayout = Math.min(calculatedPayout, simulatedTotalPool);
+        document.getElementById('payout-f2').innerText = `$${cappedPayout.toFixed(2)}`;
+    } else {
+        document.getElementById('payout-f2').innerText = `$0.00`;
+    }
+}
+
+async function submitBetTicket() {
+    const name = document.getElementById('playerName').value.trim();
+    const wager1 = parseFloat(document.getElementById('wager1').value) || 0;
+    const wager2 = parseFloat(document.getElementById('wager2').value) || 0;
+
+    if (!name) {
+        alert("Please enter your name to submit!");
+        return;
     }
 
-    function calculateEstimatedPayouts() {
-        const wager1 = parseFloat(document.getElementById('wager1').value) || 0;
-        const wager2 = parseFloat(document.getElementById('wager2').value) || 0;
+    const { error: err1 } = await supabaseClient.from('bets').insert([
+        { player_name: name, fight_number: 1, fighter_picked: userSelections[1].name, wager_amount: wager1 }
+    ]);
 
-        // Load baseline state values
-        let f1Total = currentOdds.F1_Total_Raw || 0;
-        let f2Total = currentOdds.F2_Total_Raw || 0;
-        let tonyTotal = currentOdds.TonyLiLi_Raw || 0;
-        let kevinTotal = currentOdds.KevinBrown_Raw || 0;
-        let jianTotal = currentOdds.JianHao_Raw || 0;
-        let zhuTotal = currentOdds.Zhu_Raw || 0;
+    const { error: err2 } = await supabaseClient.from('bets').insert([
+        { player_name: name, fight_number: 2, fighter_picked: userSelections[2].name, wager_amount: wager2 }
+    ]);
 
-        // --- CALCULATION & MARKET CAP FOR FIGHT 1 ---
-        if (userSelections[1].name && wager1 > 0) {
-            const simulatedTotalPool = f1Total + wager1;
-            let simulatedFighterPool = userSelections[1].name === 'TonyLiLi' ? tonyTotal + wager1 : kevinTotal + wager1;
-            
-            // Raw dynamic estimation logic
-            let calculatedPayout = wager1 * (simulatedTotalPool / simulatedFighterPool);
-            
-            // Hard limit: A winning ticket cannot payout more than the entire pool value
-            let cappedPayout = Math.min(calculatedPayout, simulatedTotalPool);
-            
-            document.getElementById('payout-f1').innerText = `$${cappedPayout.toFixed(2)}`;
-        } else {
-            document.getElementById('payout-f1').innerText = `$0.00`;
-        }
-        
-        // --- CALCULATION & MARKET CAP FOR FIGHT 2 ---
-        if (userSelections[2].name && wager2 > 0) {
-            const simulatedTotalPool = f2Total + wager2;
-            let simulatedFighterPool = userSelections[2].name === 'JianHao' ? jianTotal + wager2 : zhuTotal + wager2;
-            
-            let calculatedPayout = wager2 * (simulatedTotalPool / simulatedFighterPool);
-            let cappedPayout = Math.min(calculatedPayout, simulatedTotalPool);
-            
-            document.getElementById('payout-f2').innerText = `$${cappedPayout.toFixed(2)}`;
-        } else {
-            document.getElementById('payout-f2').innerText = `$0.00`;
-        }
+    if (err1 || err2) {
+        alert("Error saving your bets.");
+    } else {
+        alert("Ticket successfully logged!");
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        userSelections = { 1: { name: null }, 2: { name: null } };
+        document.getElementById('playerName').value = '';
+        document.getElementById('wager1').value = '10';
+        document.getElementById('wager2').value = '10';
+        document.getElementById('submitBetBtn').disabled = true;
+        document.getElementById('submitBetBtn').innerText = "Select Both Fights to Bet";
+        fetchPoolData();
     }
-
-    async function submitBetTicket() {
-        const name = document.getElementById('playerName').value.trim();
-        const wager1 = parseFloat(document.getElementById('wager1').value) || 0;
-        const wager2 = parseFloat(document.getElementById('wager2').value) || 0;
-
-        if (!name) {
-            alert("Please enter your name to submit!");
-            return;
-        }
-
-        const { error: err1 } = await supabaseClient.from('bets').insert([
-            { player_name: name, fight_number: 1, fighter_picked: userSelections[1].name, wager_amount: wager1 }
-        ]);
-
-        const { error: err2 } = await supabaseClient.from('bets').insert([
-            { player_name: name, fight_number: 2, fighter_picked: userSelections[2].name, wager_amount: wager2 }
-        ]);
-
-        if (err1 || err2) {
-            alert("Error saving your bets.");
-        } else {
-            alert("Ticket successfully logged!");
-            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-            userSelections = { 1: { name: null }, 2: { name: null } };
-            document.getElementById('playerName').value = '';
-            document.getElementById('wager1').value = '10';
-            document.getElementById('wager2').value = '10';
-            document.getElementById('submitBetBtn').disabled = true;
-            document.getElementById('submitBetBtn').innerText = "Select Both Fights to Bet";
-            fetchPoolData();
-        }
-    }
+}
 </script>
 
 </body>
