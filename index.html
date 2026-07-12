@@ -53,10 +53,36 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             text-align: center;
+            display: block;
+            padding: 4px 0;
             background: linear-gradient(90deg, #ef4444, #b91c1c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 2px 8px rgba(239, 68, 68, 0.4));
+        }
+
+        .bottom-section {
+            width: 100%;
+            max-width: 480px;
+            background-color: #1e293b;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            margin-top: 20px;
+        }
+        .bottom-section h2 {
+            font-size: 18px;
+            color: #38bdf8;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .poster-img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            border: 2px solid #334155;
         }
     </style>
 </head>
@@ -177,6 +203,20 @@
         <span>Fight 2 Payout:</span>
         <span id="payout-f2">$0.00</span>
     </div>
+</div>
+
+<!-- Section 1: Poster Image Section -->
+<div class="bottom-section">
+    <h2>Event Poster</h2>
+    <img src="YOUR_POSTER_IMAGE_URL_HERE" class="poster-img" alt="Fight Night Poster">
+</div>
+
+<!-- Section 2: Event Info Section -->
+<div class="bottom-section">
+    <h2>Event Info</h2>
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
+        Main card starts streaming live at 8:00 PM. Make sure all bets are locked in before the fighters make their ring walks.
+    </p>
 </div>
 
 <script>
